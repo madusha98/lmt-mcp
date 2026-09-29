@@ -108,7 +108,6 @@ The original project notes record successful customer-token checks on September 
 - Token storage is designed for a single local client. Writes are not atomic; an interrupted write may require signing in again.
 - Live bus tracking is not implemented.
 - An active-journey `404` can mean that no journey is currently in progress.
-- The adjacent [OpenAPI specification](../openapi.yaml) is unofficial and may differ from the current API.
 
 Use your own account and follow the API provider's terms and usage limits. The project license covers this code, not permission to access third-party services.
 
