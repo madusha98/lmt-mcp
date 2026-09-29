@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+tokens.json
+tokens.*.json
+
+# Editors and macOS
+.idea/
+.vscode/
+.DS_Store
