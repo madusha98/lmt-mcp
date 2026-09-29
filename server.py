@@ -34,7 +34,23 @@ SERVICES = {"user": USER, "fare": FARE, "ticketing": TICKET}
 TOKEN_FILE = Path(os.environ.get("LMT_TOKEN_FILE", Path.home() / ".config" / "lmt-mcp" / "tokens.json"))
 DEVICE_ID = os.environ.get("LMT_DEVICE_ID")
 
-mcp = FastMCP("lmt-go")
+mcp = FastMCP(
+    "lmt-go",
+    instructions="""LMT-GO / SmartMetro / Lanka Metro Transit bus travel in Sri Lanka.
+    Use these tools for Metro bus stops, routes, timetables, fares and journey
+    planning, including requests for the fastest route or next bus between towns.
+    For place-name requests, search_stops for both origin and destination, resolve
+    ambiguous matches with the user, then plan_journey with the returned stop IDs.
+    For example, 'Panadura to Athurugiriya via metro' starts with two stop searches.
+    For travel now, omit date. Compare returned itineraries: earliest arrival for
+    getting there soonest, or total duration for shortest travel time. Explain the
+    comparison, including available waiting and transfer times. Do not assume the
+    first result is fastest or invent missing services, times, fares or stop IDs.
+    If authentication is required, guide the user through login_start and
+    login_complete with their phone and SMS code. Do not send an OTP unprompted.
+    These tools cover this Sri Lankan bus service, not other countries' metro
+    systems, general driving directions, bookings or live bus tracking.""",
+)
 http = httpx.Client(base_url=BASE, timeout=20)
 
 
@@ -154,22 +170,39 @@ def auth_status() -> dict:
 
 @mcp.tool()
 def search_stops(query: str) -> dict:
-    """Search bus stops by name (e.g. 'colombo', 'pettah'). Returns stop ids,
-    trilingual names and coordinates. Resolve names to stop ids here first."""
+    """Use this when planning Sri Lanka Metro bus travel from town or stop names.
+    Search LMT-GO / SmartMetro / Lanka Metro Transit stops before plan_journey,
+    including fastest-route, next-bus and 'how do I get from A to B' requests.
+    query is one place name, e.g. 'Panadura', 'Athurugiriya', 'Colombo' or 'Pettah';
+    search the origin and destination separately, not the whole travel question.
+    Returns matching stop IDs, trilingual names and coordinates. Resolve ambiguous
+    matches before using their IDs. No matches means the stop was not found;
+    do not invent an ID or claim a service exists. Requires an LMT-GO login.
+    Not a search for metro systems outside Sri Lanka."""
     return _req("GET", FARE, "/stops/search", params={"q": query})
 
 
 @mcp.tool()
 def nearest_stops(lat: float, lng: float) -> dict:
-    """Find bus stops nearest to a latitude/longitude."""
+    """Find nearby LMT-GO / SmartMetro bus stops in Sri Lanka from latitude and
+    longitude. Use search_stops when the user supplies a town or stop name."""
     return _req("GET", FARE, "/stops/nearest", params={"lat": lat, "lng": lng})
 
 
 @mcp.tool()
 def plan_journey(from_stop_id: str, to_stop_id: str, date: str = "") -> dict:
-    """Plan a trip between two stop ids (from search_stops/nearest_stops).
+    """Use this for LMT-GO / SmartMetro / Lanka Metro Transit bus journey planning
+    in Sri Lanka: fastest route, next bus, timetables, transfers and fare options.
+    For requests such as 'Panadura to Athurugiriya via metro', first search_stops
+    for each place. from_stop_id and to_stop_id must be IDs returned by
+    search_stops or nearest_stops, never town names or guessed identifiers.
     Returns itinerary options with departure/arrival times, legs, route codes,
-    transfers and fare. Pass date as YYYY-MM-DD, or omit for next available."""
+    transfers and fare. Pass date as YYYY-MM-DD, or omit for next available.
+    For 'fastest now', compare arrival times among returned options, accounting
+    for waiting and transfers where available; for shortest travel time, compare
+    total durations. Explain the criterion and any missing timing data. Results
+    are not guaranteed to be sorted fastest first or to include every service.
+    Requires login. Does not book tickets or provide live bus positions."""
     params = {"from_stop_id": from_stop_id, "to_stop_id": to_stop_id}
     if date:
         params["date"] = date
@@ -180,7 +213,9 @@ def plan_journey(from_stop_id: str, to_stop_id: str, date: str = "") -> dict:
 
 @mcp.tool()
 def list_routes() -> dict:
-    """List all bus routes with geometry/directions (route code, name, stops)."""
+    """List LMT-GO / SmartMetro bus routes in Sri Lanka with geometry, directions,
+    route codes, names and stops. For the fastest trip between two places, use
+    search_stops then plan_journey; this route list does not compare itineraries."""
     return _req("GET", FARE, "/routes/geo")
 
 

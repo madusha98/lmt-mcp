@@ -87,6 +87,48 @@ For example, ask: “Help me find the next bus from Pettah to my destination.”
 
 `api_get` is an advanced tool for endpoints without a dedicated wrapper. It attaches authentication when saved tokens exist. With no saved session, it can request public endpoints. An expired session that cannot be refreshed can currently block these public requests too.
 
+### Helping your assistant find the right tool
+
+The server advertises its Sri Lankan Metro bus scope and journey-planning workflow through MCP instructions and tool descriptions. These descriptions connect phrases such as “Metro”, “SmartMetro”, “fastest route”, and “next bus” to the appropriate tools. Editing this README alone does not update the metadata your assistant receives. Tool discovery and selection depend on the client; descriptions guide the assistant but do not guarantee that it will use a tool. See the [MCP tools specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools).
+
+For a request such as “I need to go from Panadura to Athurugiriya via metro. Find me the fastest route”, the expected workflow is:
+
+1. Call `search_stops` separately for `Panadura` and `Athurugiriya`.
+2. Resolve any ambiguous stop matches, then call `plan_journey` with their returned IDs.
+3. Compare the returned options. For getting there soonest, compare arrival times including waiting and transfers where available. Explain missing timing information instead of guessing.
+
+If authentication is required, complete the SMS login flow and resume the request. Example place names do not guarantee that a stop or itinerary will be available.
+
+After changing the server, restart or reconnect it through your MCP client so the updated script is running. Refresh or reload the tool list if your client provides that option, confirm the updated descriptions are visible, and test in a new conversation with the connection enabled. The exact controls vary by client.
+
+If the connection still shows old descriptions, confirm that it points to the copy of `server.py` you edited. If it shows no tools at all, check the server connection and startup errors before tuning prompts.
+
+### Optional companion skill
+
+The [lmt-transit skill](skills/lmt-transit/SKILL.md) uses the open [Agent Skills format](https://agentskills.io/home). It provides workflow instructions for assistants: use this operator's MCP for Sri Lankan Metro journey requests, look up stops, handle login, and compare departures before falling back to web timetables.
+
+The MCP server and the skill are separate components. The server provides callable tools; the skill explains when and how to use them. The server works without the skill, and installing the server does not automatically install the skill. A client may support MCP without supporting Agent Skills.
+
+To use the skill with a compatible client:
+
+1. Connect the `lmt-go` MCP server using the setup instructions above.
+2. Import the `skills/lmt-transit` folder, or copy it into the skill directory documented by your client. Keep `SKILL.md` inside its `lmt-transit` folder.
+3. Reload skills or restart the client if required, then confirm that `lmt-transit` is available.
+4. Test a natural travel request and, if supported, select the skill explicitly using your client's skill picker or invocation syntax.
+
+Installation paths, tool-name prefixes, invocation syntax, and automatic skill selection vary by client. The skill does not install or start the MCP server. If your client does not support skills, you can use its supported instruction mechanism to provide the workflow from `SKILL.md` instead.
+
+If only explicit skill selection works, automatic selection still needs tuning. A successful MCP protocol check confirms the tools are exposed; it does not prove that an assistant will select them for a particular prompt.
+
+Try these in separate new conversations after refreshing:
+
+| Prompt | Expected behavior |
+|---|---|
+| “Use LMT-GO to plan Panadura to Athurugiriya.” | Search both stops, then plan the journey or request login. |
+| “I need to go from Panadura to Athurugiriya via metro. Find me the fastest route.” | Discover the transit tools without the MCP server name. |
+| “Moratuwa to Athrugiriya via metro. Find me the next available bus.” | Search the stops, allowing for the destination spelling, then compare available departures. |
+| “Find me the fastest route on the Paris metro.” | Do not use this Sri Lankan bus server. |
+
 ## Configuration
 
 Set these environment variables in your MCP client's server configuration if needed:
